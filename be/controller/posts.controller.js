@@ -1,0 +1,149 @@
+const pool = require("../database/index")
+const postsController = {
+    getAll: async (req, res) => {
+        try{
+            // const [rows, fields] = await pool.query('select * from posts LEFT JOIN likes ON posts.id = likes.postId ')
+            const [rows, fields] = await pool.query('select * from posts order by id desc')
+            const data = rows.map(row => {
+                return {
+                    ...row,
+                    img: JSON.parse(row.img)
+                    }
+                })
+            res.json({
+                data
+            })
+        } catch (error){
+            res.status(401).json({status: "error", message: error.message })
+        }
+    },
+    getById: async (req, res) => {
+        try {
+            const { id } = req.params
+            const [rows, fields] = await pool.query("select * from posts where id = ?", [id])
+            const data = rows.map(row => {
+            return {
+                ...row,
+                img: JSON.parse(row.img)
+                }
+            })
+            res.json({
+                data
+            })
+        } catch (error) {
+            res.status(401).json({status: "error", message: error.message })
+        }
+    },
+    getByUserId: async (req, res) => {
+        try {
+            const { userId } = req.params
+            const [rows, fields] = await pool.query("select * from posts where userId = ?", [userId])
+            const data = rows.map(row => {
+            return {
+                ...row,
+                img: JSON.parse(row.img)
+                }
+            })
+            res.json({
+                data
+            })
+        } catch (error) {
+            res.status(401).json({status: "error", message: error.message })
+        }
+    },
+    getPostMostLikes: async (req, res) => {
+        try {
+          const [rows, fields] = await pool.query(`
+            SELECT posts.*, COUNT(likes.id) AS num_likes
+            FROM posts
+            LEFT JOIN likes ON posts.id = likes.postId
+            GROUP BY posts.id
+            ORDER BY num_likes DESC
+            LIMIT 1
+          `)
+          const data = rows.map(row => {
+            return {
+              ...row,
+              img: JSON.parse(row.img)
+            }
+          })
+          res.json({
+            data
+          })
+        } catch (error) {
+          res.status(401).json({ status: "error", message: error.message })
+        }
+      },
+    create: async (req, res) => {
+        try {
+            const { descrip, img, userId, createdAt, isLiked } = req.body
+            const sql = "insert into posts (descrip, img, userId, createdAt, isLiked) values (?, ?, ?, ?, ?)"
+            const [rows, fields] = await pool.query(sql, [descrip, JSON.stringify(img), userId, createdAt, isLiked])
+            res.status(201).json({
+                data: "Created new post!"
+            })
+        } catch (error) {
+            console.log(error)
+            res.status(401).json({ status: "error" })
+        }
+    },
+    updateIsLiked: async (req, res) => {
+        try {
+            const { isLiked } = req.body
+            const {id} = req.params
+            const sql = "update posts set isLiked = ? where id = ?"
+            const [rows, fields] = await pool.query(sql, [isLiked, id]) 
+            res.status(201).json({
+                title: `Successful!`
+            })
+        } catch (error) {
+            res.status(401).json({ status: "error" })
+        }
+    },
+    update: async (req, res) => {
+        try {
+            const { descrip, img, userId, createdAt, isLiked } = req.body
+            const {id} = req.params
+            const sql = "update posts set descrip = ?, img = ?, userId = ?, createdAt = ?, isLiked = ? where id = ?"
+            const [rows, fields] = await pool.query(sql, [descrip, JSON.stringify(img), userId, createdAt, isLiked, id]) 
+            res.status(201).json({
+                title: `updated post ${id}!`
+            })
+        } catch (error) {
+            res.status(401).json({ status: "error" })
+        }
+    },
+    delete: async (req, res) => {
+        try {
+            const { id } = req.params
+            const [rows, fields] = await pool.query("delete from posts where id = ?", [id])
+            res.json({
+                data: `delete post ${id} successfully!`
+            })
+        } catch (error) {
+            console.log(error)
+            res.status(401).json({
+                status: "error"
+            })
+        }
+    },
+    searchByDescript: async (req, res) => {
+        try {
+          const { query } = req.query;
+          const [rows, fields] = await pool.query("SELECT * FROM posts WHERE descrip LIKE ?", [`%${query}%`]);
+          const data = rows.map(row => {
+            return {
+              ...row,
+              img: JSON.parse(row.img)
+            }
+          })
+          res.json({
+            data
+          })
+        } catch (error) {
+          res.status(401).json({ status: "error", message: error.message })
+        }
+    }
+}
+
+module.exports = postsController
